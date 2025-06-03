@@ -17,7 +17,6 @@ while subdomain_set:
     
     processed_domains.add(current_domain)
     
-    # Read newly found domains
     with open(directory, "r") as f:
         for line in f:
             string = line.strip()
