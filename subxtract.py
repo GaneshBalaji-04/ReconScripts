@@ -9,7 +9,7 @@ while subdomain_set:
     for domain in current_domains:
         print(f"[+] Finding the subdomains for {domain}...")
         os.system(f"subfinder -d {domain} -silent -all >> {directory}")
-        os.system(f"assetfinder -d {domain} >> {directory}")
+        os.system(f"assetfinder {domain} >> {directory}")
         print(f"[+] Subdomains found successfully for {domain}...\n")
                 
         subdomain_set.remove(domain)
