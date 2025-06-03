@@ -1,19 +1,17 @@
 import os
 
-domain = input("Enter your domain for subdomain enumeration:")
-subdomain_set = {domain}
-final_destination_directory = domain + "_all_subdomains.txt"
-num = 0
+input_domain = input("Enter your domain for subdomain enumeration:")
+subdomain_set = {input_domain}
+directory = "sub_"+input_domain+".txt"
 
 while subdomain_set:
     current_domains = list(subdomain_set.copy())
     for domain in current_domains:
-        directory = f"_subdomain_{num}.txt"
-        num += 1
         print(f"[+] Finding the subdomains for {domain}...")
-        os.system(f"subfinder -d {domain} -o {directory} -silent > /dev/null")
+        os.system(f"subfinder -d {domain} -silent -all >> {directory}")
+        os.system(f"assetfinder -d {domain} >> {directory}")
         print(f"[+] Subdomains found successfully for {domain}...\n")
-        
+                
         subdomain_set.remove(domain)
         
         with open(directory, "r") as f:
@@ -23,5 +21,10 @@ while subdomain_set:
                     string = string[:-1]
                 subdomain_set.add(string)
 
-os.system(f"cat _subdomain* | sort -u > {final_destination_directory}")
-os.system("rm _subdomain*")
+os.system(f"cat {directory} | sort -u >> clean_sub_{input_domain}.txt")
+os.system(f"rm sub_{input_domain}.txt")
+
+ch = input("Do you want to perform the live subdomain detection?? (y or n)")
+if ch==y:
+	os.system(f"httpx -l clean_sub_{input_domain}.txt -sc -title -tech-detect -o live_info_{input_domain}.txt")
+print("\n\n\nThank you for using the script...")
