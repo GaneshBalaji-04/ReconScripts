@@ -77,6 +77,6 @@ if subfinder_file and assetfinder_file:  # Check if files were created
     ch = input("Do you want to perform the live subdomain detection? (y/n): ")
     if ch.lower() == 'y':
         os.system(f"httpx -l clean_sub_{input_domain}.txt -sc -title -tech-detect -o live_info_{input_domain}.txt")
-    print("\n\n\nThank you for using the script...")
+    print("\nThank you for using the script...")
 else:
     print("[-] Error: Subdomain enumeration files were not created properly.")
