@@ -109,15 +109,15 @@ t3.join()
 
 print("[+] The subdomain enumeration has been completed..")
 
-if subfinder_file and assetfinder_file:  # Check if files were created
+if subfinder_file and assetfinder_file and findomain_file: 
     os.system(f"cat {subfinder_file} >> {assetfinder_file}")
     os.system(f"cat {findomain_file} >> {assetfinder_file}")
     os.system(f"cat {assetfinder_file} | sort -u >> clean_sub_{input_domain}.txt")
     os.system(f"rm {subfinder_file} {assetfinder_file} {findomain_file}")
-
-    ch = input("Do you want to perform the live subdomain detection? (y/n): ")
-    if ch.lower() == 'y':
-        os.system(f"httpx -l clean_sub_{input_domain}.txt -sc -title -tech-detect -o live_info_{input_domain}.txt")
+    print("[+] Performing Live subdomains discovery...")
+    os.system(f"naabu -l clean_sub_{input_domain}.txt -o live_{input_domain}.txt")
+    os.system(f"httpx -l live_{input_domain}.txt -sc -title -tech-detect -o live_info_{input_domain}.txt")
+    print("[+] Live subdomains discovery completed...")
     print("\nThank you for using the script...")
 else:
     print("[-] Error: Subdomain enumeration files were not created properly.")
