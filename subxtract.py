@@ -8,7 +8,7 @@ findomain_file = ""
 
 def get_parent_domain(domain):
     parts = domain.split('.')
-    return ['.'.join(parts[i:]) for i in range(1, len(parts))]
+    return ['.'.join(parts[i:]) for i in range(1, len(parts))][0]
     
 def findomain(domain):
     global findomain_file
