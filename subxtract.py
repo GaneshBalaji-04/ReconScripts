@@ -115,7 +115,7 @@ if subfinder_file and assetfinder_file and findomain_file:
     os.system(f"cat {assetfinder_file} | sort -u >> clean_sub_{input_domain}.txt")
     os.system(f"rm {subfinder_file} {assetfinder_file} {findomain_file}")
     print("[+] Performing Live subdomains discovery...")
-    os.system(f"naabu -l clean_sub_{input_domain}.txt -o live_{input_domain}.txt")
+    os.system(f"naabu -l clean_sub_{input_domain}.txt -p- -Pn -o live_{input_domain}.txt > /dev/null")
     os.system(f"httpx -l live_{input_domain}.txt -sc -title -tech-detect -o live_info_{input_domain}.txt")
     print("[+] Live subdomains discovery completed...")
     print("\nThank you for using the script...")
