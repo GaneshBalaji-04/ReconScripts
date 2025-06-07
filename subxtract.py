@@ -6,6 +6,10 @@ subfinder_file = ""
 assetfinder_file = ""
 findomain_file = ""
 
+def get_parent_domain(domain):
+    parts = domain.split('.')
+    return ['.'.join(parts[i:]) for i in range(1, len(parts))]
+    
 def findomain(domain):
     global findomain_file
     subdomain_set = {domain}
@@ -14,11 +18,7 @@ def findomain(domain):
     findomain_file = directory
     while subdomain_set:
     	current_domain = subdomain_set.pop()
-    	domain_ = current_domain.split(".")
-    	domain_.remove(domain_[0])
-    	parent_domain = domain_[0]
-    	for i in range(1,len(domain_)):
-    		parent_domain = parent_domain + "." + domain_[i]
+    	parent_domain = get_parent_domain(current_domain)
     	subdomain_set.add(parent_domain)
     	if current_domain in processed_domains:
     		continue
@@ -40,11 +40,7 @@ def assetfinder(domain):
     assetfinder_file = directory
     while subdomain_set:
         current_domain = subdomain_set.pop()
-        domain_ = current_domain.split(".")
-        domain_.remove(domain_[0])
-        parent_domain = domain_[0]
-        for i in range(1,len(domain_)):
-        	parent_domain = parent_domain + "." + domain_[i]
+        parent_domain = get_parent_domain(current_domain)
         subdomain_set.add(parent_domain)
         if current_domain in processed_domains:
             continue
@@ -67,11 +63,7 @@ def subfinder(domain):
 
     while subdomain_set:
         current_domain = subdomain_set.pop()
-        domain_ = current_domain.split(".")
-        domain_.remove(domain_[0])
-        parent_domain = domain_[0]
-        for i in range(1,len(domain_)):
-        	parent_domain = parent_domain + "." + domain_[i]
+        parent_domain = get_parent_domain(current_domain)
         subdomain_set.add(parent_domain)
         if current_domain in processed_domains:
             continue
