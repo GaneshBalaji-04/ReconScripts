@@ -1,10 +1,14 @@
+import subprocess
+from concurrent.futures import ThreadPoolExecutor
 import os
-import threading
-import time
 
-subfinder_file = ""
-assetfinder_file = ""
-findomain_file = ""
+def run_command(command):
+    """Run a shell command and return output lines as list."""
+    try:
+        output = subprocess.check_output(command, shell=True, text=True)
+        return [line.strip().rstrip('.') for line in output.splitlines() if line.strip()]
+    except subprocess.CalledProcessError:
+        return []
 
 def get_parent_domain(domain, original_domain):
     parts = domain.split('.')
@@ -12,111 +16,92 @@ def get_parent_domain(domain, original_domain):
         return None
     return '.'.join(parts[1:])
 
-    
-def findomain(domain):
-    global findomain_file
-    subdomain_set = {domain}
-    processed_domains = set()
-    directory = "findomain_sub_"+domain+".txt"
-    findomain_file = directory
-    while subdomain_set:
-    	current_domain = subdomain_set.pop()
-    	if current_domain != domain:
-    		parent_domain = get_parent_domain(current_domain,domain)
-    		if parent_domain is not None:
-    			subdomain_set.add(parent_domain)
-    	if current_domain in processed_domains:
-    		continue
-    	os.system(f"findomain -t {current_domain} -q >> {directory} 2>/dev/null")
-    	processed_domains.add(current_domain)
-    	with open(directory, "r") as f:
-    	    for line in f:
-                string = line.strip()
-                if string.endswith("."):
-                    string = string[:-1]
-                if string not in processed_domains:
-                    subdomain_set.add(string)
+def enumerate_tool(domain, tool_name, base_command, recursive=True):
+    print(f"[+] Starting {tool_name} on {domain} (recursive={recursive})")
 
-def assetfinder(domain):
-    global assetfinder_file  
-    subdomain_set = {domain}
-    processed_domains = set()
-    directory = "asset_sub_"+domain+".txt"
-    assetfinder_file = directory
-    while subdomain_set:
-        current_domain = subdomain_set.pop()
-        if current_domain != domain:
-        	parent_domain = get_parent_domain(current_domain,domain)
-        	if parent_domain is not None:
-        		subdomain_set.add(parent_domain)
-        if current_domain in processed_domains:
+    subdomains = set([domain])
+    processed = set()
+    results = set()
+
+    while subdomains:
+        current = subdomains.pop()
+        if current in processed:
             continue
-        os.system(f"assetfinder -subs-only {current_domain} >> {directory} 2>/dev/null")
-        processed_domains.add(current_domain)
-        with open(directory, "r") as f:
-            for line in f:
-                string = line.strip()
-                if string.endswith("."):
-                    string = string[:-1]
-                if string not in processed_domains:
-                    subdomain_set.add(string)
+
+        if recursive and current != domain:
+            parent = get_parent_domain(current, domain)
+            if parent and parent not in processed:
+                subdomains.add(parent)
+
+        command = base_command.format(domain=current)
+        found = run_command(command)
+        new_subs = set(found) - processed
+        results.update(new_subs)
+        subdomains.update(new_subs)
+        processed.add(current)
+
+    output_file = f"{tool_name}_sub_{domain}.txt"
+    with open(output_file, 'w') as f:
+        for sub in sorted(results):
+            f.write(sub + '\n')
+    print(f"[+] {tool_name} completed. Found {len(results)} subdomains.")
+    return output_file
 
 def subfinder(domain):
-    global subfinder_file  
-    subdomain_set = {domain}
-    processed_domains = set()
-    directory = "subfinder_sub_"+domain+".txt"
-    subfinder_file = directory
+    print(f"[+] Running subfinder on {domain} (non-recursive)")
+    results = run_command(f"subfinder -d {domain} -silent 2>/dev/null")
+    output_file = f"subfinder_sub_{domain}.txt"
+    with open(output_file, 'w') as f:
+        for sub in sorted(set(results)):
+            f.write(sub + '\n')
+    print(f"[+] subfinder completed. Found {len(results)} subdomains.")
+    return output_file
 
-    while subdomain_set:
-        current_domain = subdomain_set.pop()
-        if current_domain != domain:
-        	parent_domain = get_parent_domain(current_domain,domain)
-        	if parent_domain is not None:
-        		subdomain_set.add(parent_domain)
-        if current_domain in processed_domains:
-            continue
-        os.system(f"subfinder -d {current_domain} -silent >> {directory} 2>/dev/null")  
-        processed_domains.add(current_domain)
+def combine_and_deduplicate(files, output_file):
+    all_subs = set()
+    for file in files:
+        if os.path.exists(file):
+            with open(file, 'r') as f:
+                for line in f:
+                    sub = line.strip().rstrip('.')
+                    if sub:
+                        all_subs.add(sub)
+            os.remove(file)
+    with open(output_file, 'w') as f:
+        for sub in sorted(all_subs):
+            f.write(sub + '\n')
+    print(f"[+] Final deduplicated output saved to '{output_file}' with {len(all_subs)} unique subdomains.")
 
-        with open(directory, "r") as f:
-            for line in f:
-                string = line.strip()
-                if string.endswith("."):
-                    string = string[:-1]
-                if string not in processed_domains:
-                    subdomain_set.add(string)
+if __name__ == "__main__":
+    domain = input("Enter your domain for subdomain enumeration: ").strip()
+    print(f"\n[+] Starting recursive subdomain enumeration for: {domain}")
+    print("[+] Using subfinder (non-recursive) and findomain, assetfinder, amass (recursive)")
+    print("[+] Please wait...\n")
 
-input_domain = input("Enter your domain for subdomain enumeration: ")
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = []
+        futures.append(executor.submit(subfinder, domain))
+        futures.append(executor.submit(
+            enumerate_tool,
+            domain,
+            "findomain",
+            "findomain -t {domain} -q 2>/dev/null"
+        ))
+        futures.append(executor.submit(
+            enumerate_tool,
+            domain,
+            "assetfinder",
+            "assetfinder -subs-only {domain} 2>/dev/null"
+        ))
+        futures.append(executor.submit(
+            enumerate_tool,
+            domain,
+            "amass",
+            "amass enum -d {domain} -o - 2>/dev/null"
+        ))
 
-t1 = threading.Thread(target=assetfinder, args=(input_domain,))
-t2 = threading.Thread(target=subfinder, args=(input_domain,))
-t3 = threading.Thread(target=findomain, args=(input_domain,))
+        result_files = [f.result() for f in futures]
 
-print(f"[+] Starting the subdomain enumeration of {input_domain}..")
-time.sleep(1)
-print("[+] It is a recursive subdomain enumeration, i.e., this script finds the subdomains of the subdomains until there is no one left...")
-time.sleep(1)
-print("[+] It will take some time... So Sit back and Relax...")
-time.sleep(1)
-
-t1.start()
-t2.start()
-t3.start()
-
-t1.join()
-t2.join()
-t3.join()
-
-print("[+] The subdomain enumeration has been completed..")
-
-if subfinder_file and assetfinder_file and findomain_file: 
-    os.system(f"cat {subfinder_file} >> {assetfinder_file}")
-    os.system(f"cat {findomain_file} >> {assetfinder_file}")
-    os.system(f"mv {assetfinder_file} clean_subs_{input_domain}.txt")
-    os.system(f"rm {subfinder_file} {findomain_file}")
-    os.system(f"sort clean_subs_{input_domain}.txt -u > clean__subs_{input_domain}.txt")
-    os.system(f"rm clean_subs_{input_domain}.txt")
-    print("\nThank you for using the script...")
-else:
-    print("[-] Error: Subdomain enumeration files were not created properly.")
+    final_output = f"clean__subs_{domain}.txt"
+    combine_and_deduplicate(result_files, final_output)
+    print("\n[+] Subdomain enumeration completed successfully.")
