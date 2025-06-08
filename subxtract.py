@@ -6,9 +6,12 @@ subfinder_file = ""
 assetfinder_file = ""
 findomain_file = ""
 
-def get_parent_domain(domain):
+def get_parent_domain(domain, original_domain):
     parts = domain.split('.')
-    return ['.'.join(parts[i:]) for i in range(1, len(parts))][0]
+    if len(parts) <= original_domain.count('.') + 1:
+        return None
+    return '.'.join(parts[1:])
+
     
 def findomain(domain):
     global findomain_file
@@ -19,8 +22,9 @@ def findomain(domain):
     while subdomain_set:
     	current_domain = subdomain_set.pop()
     	if current_domain != domain:
-    		parent_domain = get_parent_domain(current_domain)
-    		subdomain_set.add(parent_domain)
+    		parent_domain = get_parent_domain(current_domain,domain)
+    		if parent_domain is not None:
+    			subdomain_set.add(parent_domain)
     	if current_domain in processed_domains:
     		continue
     	os.system(f"findomain -t {current_domain} -q >> {directory} 2>/dev/null")
@@ -42,8 +46,9 @@ def assetfinder(domain):
     while subdomain_set:
         current_domain = subdomain_set.pop()
         if current_domain != domain:
-        	parent_domain = get_parent_domain(current_domain)
-        	subdomain_set.add(parent_domain)
+        	parent_domain = get_parent_domain(current_domain,domain)
+        	if parent_domain is not None:
+        		subdomain_set.add(parent_domain)
         if current_domain in processed_domains:
             continue
         os.system(f"assetfinder -subs-only {current_domain} >> {directory} 2>/dev/null")
@@ -66,8 +71,9 @@ def subfinder(domain):
     while subdomain_set:
         current_domain = subdomain_set.pop()
         if current_domain != domain:
-        	parent_domain = get_parent_domain(current_domain)
-        	subdomain_set.add(parent_domain)
+        	parent_domain = get_parent_domain(current_domain,domain)
+        	if parent_domain is not None:
+        		subdomain_set.add(parent_domain)
         if current_domain in processed_domains:
             continue
         os.system(f"subfinder -d {current_domain} -silent >> {directory} 2>/dev/null")  
